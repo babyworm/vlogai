@@ -67,7 +67,7 @@ def grep_vim_buf(vim_buf, pattern):
 def find_declares_ln(vim_buf):
     """Find the line number of auto-declarasion directives.
     """
-    
+  
     re_pat_prespace = re.compile(r'^(\s*)')
     re_pat_aws = re.compile(rf'^\s*/\*\s*{directives["AW"]}-begin\s*\*/')
     re_pat_awe = re.compile(rf'^\s*/\*\s*{directives["AW"]}-end\s*\*/')
@@ -281,7 +281,7 @@ def get_instances(flist, vim_buf, inst_name=None, search_dir=''):
                 if re_pat_semicolon.search(line):
                     end_ln += idx
                     break
-            
+          
             # get the indent
             mat = re_pat_prespace.search(vim_buf[i.lineno - 1])
             indent = len(mat.group(1)) if mat else 0
@@ -315,7 +315,7 @@ def generate_declares(instances, windent=0, pindent=0, precomma=True):
         instp_len, slice_len = tuple(map(max, list(zip(*len_list))))
         max_instp_len = instp_len if max_instp_len < instp_len else max_instp_len
         max_slice_len = slice_len if max_slice_len < slice_len else max_slice_len
-    
+  
     # Get all instports for wire and port declarations. Dict is used to remove duplicated name.
     wire_dict, port_dict = ({}, {})
     for inst in instances.values():
@@ -420,7 +420,7 @@ def expand_inst_ports(inst, intf_defs, port_defs):
                         'type': v['type']}
     # update
     inst['port'].update(new_inst_ports)
- 
+
 
 def recursive_expand_intf(intf_defs, mod):
     if mod not in intf_defs:
@@ -591,23 +591,38 @@ class VlogAutoInst:
 
         code = f'{indent_lvl0}{self.mod} '
         if self.param_dict:
-            code += f'#(\n{indent_lvl1} .'
-            # find the max length of parameter length
+            ## MOD ETHAN
+            #code += f'#(\n{indent_lvl1} .'
+            ## find the max length of parameter length
+            #max_k_len = max([len(str(k).split(".")[-1]) for k in self.param_dict.keys()])
+            #max_v_len = max([len(v.value) for v in self.param_dict.values()])
+            #param_list = [f'{str(k).split(".")[-1]:{max_k_len}} ({v.value:{max_v_len}})'
+            #              for k, v in self.param_dict.items()]
+            #code += f'\n{indent_lvl1},.'.join(param_list)
+            #code += f'\n{indent_lvl0}) '
+            code += f'#(\n{indent_lvl1}.'
             max_k_len = max([len(str(k).split(".")[-1]) for k in self.param_dict.keys()])
             max_v_len = max([len(v.value) for v in self.param_dict.values()])
-            param_list = [f'{str(k).split(".")[-1]:{max_k_len}} ({v.value:{max_v_len}})'
+            param_list = [f'{str(k).split(".")[-1]:{max_k_len}} ({str(k).split(".")[-1]:{max_v_len}}),'
                           for k, v in self.param_dict.items()]
-            code += f'\n{indent_lvl1},.'.join(param_list)
+            code += f'\n{indent_lvl1}.'.join(param_list)
+            code = code[:-1]
             code += f'\n{indent_lvl0}) '
 
-        code += f'{inst_name} ( /* {directives["AI"]} */\n{indent_lvl1} .'
+        #code += f'{inst_name} ( /* {directives["AI"]} */\n{indent_lvl1} .'
+        code += f'{inst_name} ( \n{indent_lvl1}.'
         # find the max length of port length
         len_list = [(len(k), len(f'{v["instp"]}{v["slice"]}')) for k, v in self.port_dict.items()]
         max_k_len, max_v_len = tuple(map(max, list(zip(*len_list))))
         # print(f'max_k={max_k_len}, max_v={max_v_len}')
-        ports = [f'{k:{max_k_len}} ({v["instp"]+v["slice"]:{max_v_len}}) //{v["type"]}{v["dir"]}'
+        ## ETHAN
+        #ports = [f'{k:{max_k_len}} ({v["instp"]+v["slice"]:{max_v_len}}) //{v["type"]}{v["dir"]}'
+        #         for k, v in self.port_dict.items()]
+        #code += f'\n{indent_lvl1},.'.join(ports)
+        ports = [f'{k:{max_k_len}} ({v["instp"]:{max_v_len}}),'
                  for k, v in self.port_dict.items()]
-        code += f'\n{indent_lvl1},.'.join(ports)
+        code += f'\n{indent_lvl1}.'.join(ports)
+        code = code[:-1]
         code += f'\n{indent_lvl0}); // end of {inst_name}'
 
         return code
